@@ -154,7 +154,7 @@ class AE_Checkout_Fields {
 		return sprintf(
 			/* translators: 1: data formatada, 2: nome do turno, 3: horário inicial, 4: horário final */
 			__( '%1$s — %2$s (%3$s às %4$s)', 'agendar-entregas' ),
-			wp_date( 'd/m/Y', strtotime( $data ) ),
+			wp_date( get_option( 'date_format', 'd/m/Y' ), strtotime( $data ) ),
 			$turno->nome,
 			$turno->hora_inicio,
 			$turno->hora_fim

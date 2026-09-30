@@ -91,7 +91,14 @@ jQuery( function ( $ ) {
 
 		if ( ! instancia ) {
 			instancia = window.flatpickr( $data[0], {
+				// dateFormat continua Y-m-d: é o valor "de verdade" enviado no
+				// formulário/AJAX (input original, mantido em sincronia mas
+				// escondido pelo altInput). altFormat é só o que o cliente vê,
+				// seguindo o formato de data configurado em Ajustes > Geral do
+				// WordPress (aeCheckout.formatoData), em vez de sempre AAAA-MM-DD.
 				dateFormat: 'Y-m-d',
+				altInput: true,
+				altFormat: aeCheckout.formatoData,
 				locale: window.flatpickr.l10ns && window.flatpickr.l10ns.pt ? 'pt' : undefined,
 				minDate: aeCheckout.dataMinima,
 				defaultDate: $data.val() || null,

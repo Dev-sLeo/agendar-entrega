@@ -60,10 +60,14 @@ class AE_Checkout_Assets {
 			'ae-checkout',
 			'aeCheckout',
 			array(
-				'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
-				'nonce'      => wp_create_nonce( 'ae_get_turnos' ),
-				'dataMinima' => AE_Disponibilidade::data_minima(),
-				'textos'     => array(
+				'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
+				'nonce'       => wp_create_nonce( 'ae_get_turnos' ),
+				'dataMinima'  => AE_Disponibilidade::data_minima(),
+				// Formato de exibição do datepicker (Ajustes > Geral > Formato de
+				// data): os tokens do Flatpickr (d, m, Y, j, n, D, F...) seguem o
+				// mesmo padrão do date() do PHP, então dá pra usar o valor direto.
+				'formatoData' => get_option( 'date_format', 'd/m/Y' ),
+				'textos'      => array(
 					'selecioneData' => __( 'Selecione a data primeiro', 'agendar-entregas' ),
 					'semTurno'      => __( 'Nenhum turno disponível para esta data', 'agendar-entregas' ),
 				),

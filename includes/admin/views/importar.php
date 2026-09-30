@@ -97,7 +97,10 @@ $botao_class = 'inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text
 			<div class="text-sm text-gray-600 border-t border-gray-100 pt-4 mt-2">
 				<p>
 					<strong><?php esc_html_e( 'Última sincronização:', 'agendar-entregas' ); ?></strong>
-					<?php echo $ultima_sync ? esc_html( wp_date( 'd/m/Y H:i', strtotime( $ultima_sync ) ) ) : esc_html__( 'Nunca sincronizado.', 'agendar-entregas' ); ?>
+					<?php
+					$formato_data_hora = get_option( 'date_format', 'd/m/Y' ) . ' ' . get_option( 'time_format', 'H:i' );
+					echo $ultima_sync ? esc_html( wp_date( $formato_data_hora, strtotime( $ultima_sync ) ) ) : esc_html__( 'Nunca sincronizado.', 'agendar-entregas' );
+					?>
 				</p>
 				<?php if ( $ultimo_erro ) : ?>
 					<p class="text-red-700 mt-1"><?php echo esc_html( $ultimo_erro ); ?></p>
