@@ -7,6 +7,7 @@
  * Author: Upsites
  * Text Domain: agendar-entregas
  * Requires Plugins: woocommerce
+ * Update URI: https://github.com/Dev-sLeo/agendar-entrega
  */
 
 if (! defined('ABSPATH')) {
@@ -16,11 +17,17 @@ if (! defined('ABSPATH')) {
 define('AE_PLUGIN_FILE', __FILE__);
 define('AE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('AE_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('AE_VERSION', '1.0.0');
+define('AE_VERSION', '1.0.1');
 
 require_once AE_PLUGIN_DIR . 'includes/class-ae-plugin.php';
+require_once AE_PLUGIN_DIR . 'includes/class-ae-github-updater.php';
 
 register_activation_hook(__FILE__, array('AE_Plugin', 'activate'));
 register_deactivation_hook(__FILE__, array('AE_Plugin', 'deactivate'));
 
 add_action('plugins_loaded', array('AE_Plugin', 'instance'));
+
+// Fora do bootstrap principal (independente do WooCommerce estar ativo): a
+// checagem de atualização deve funcionar mesmo que o plugin esteja com uma
+// dependência faltando.
+new AE_GitHub_Updater();
