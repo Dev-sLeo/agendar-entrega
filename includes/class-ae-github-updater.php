@@ -29,12 +29,21 @@ class AE_GitHub_Updater {
 	 */
 	const CACHE_HORAS = 6;
 
+	/**
+	 * Ação/nonce do link "Verificar atualização agora" — força uma nova
+	 * consulta ao GitHub na hora, sem esperar o cache de 6h ou o cron do
+	 * WordPress, útil pra diagnosticar se a atualização não aparece.
+	 */
+	const ACAO_VERIFICAR_AGORA = 'ae_verificar_atualizacao';
+
 	public function __construct() {
 		add_filter( 'pre_set_site_transient_update_plugins', array( $this, 'checar_atualizacao' ) );
 		add_filter( 'plugins_api', array( $this, 'detalhes_plugin' ), 20, 3 );
 		add_filter( 'upgrader_source_selection', array( $this, 'corrigir_pasta_extraida' ), 10, 4 );
 		add_filter( 'upgrader_pre_download', array( $this, 'usar_token_no_download' ), 10, 3 );
 		add_filter( 'plugin_row_meta', array( $this, 'link_changelog' ), 10, 2 );
+		add_action( 'admin_post_' . self::ACAO_VERIFICAR_AGORA, array( $this, 'verificar_agora' ) );
+		add_action( 'admin_notices', array( $this, 'aviso_resultado_verificacao' ) );
 	}
 
 	private function arquivo_plugin() {
@@ -213,8 +222,83 @@ class AE_GitHub_Updater {
 	public function link_changelog( $links, $arquivo ) {
 		if ( $this->arquivo_plugin() === $arquivo ) {
 			$links[] = '<a href="https://github.com/' . self::REPO . '/releases" target="_blank">' . esc_html__( 'Ver changelog', 'agendar-entregas' ) . '</a>';
+
+			$url_verificar = wp_nonce_url(
+				admin_url( 'admin-post.php?action=' . self::ACAO_VERIFICAR_AGORA ),
+				self::ACAO_VERIFICAR_AGORA
+			);
+			$links[] = '<a href="' . esc_url( $url_verificar ) . '">' . esc_html__( 'Verificar atualização agora', 'agendar-entregas' ) . '</a>';
 		}
 
 		return $links;
+	}
+
+	/**
+	 * Ignora os dois caches (o nosso, de 6h, e o transient nativo do
+	 * WordPress) e força uma nova consulta ao GitHub na hora — usado pelo
+	 * link "Verificar atualização agora" na lista de plugins, para não
+	 * precisar esperar o ciclo normal (cron a cada ~12h) quando algo parece
+	 * não estar detectando a versão nova.
+	 */
+	public function verificar_agora() {
+		check_admin_referer( self::ACAO_VERIFICAR_AGORA );
+
+		if ( ! current_user_can( 'update_plugins' ) ) {
+			wp_die( esc_html__( 'Sem permissão.', 'agendar-entregas' ) );
+		}
+
+		delete_transient( self::CACHE_KEY );
+		delete_site_transient( 'update_plugins' );
+
+		require_once ABSPATH . 'wp-admin/includes/update.php';
+		wp_update_plugins();
+
+		$release = $this->obter_release();
+
+		if ( empty( $release ) ) {
+			$resultado = 'erro_conexao';
+		} else {
+			$transient = get_site_transient( 'update_plugins' );
+			$resultado = isset( $transient->response[ $this->arquivo_plugin() ] ) ? 'nova_versao' : 'sem_novidade';
+		}
+
+		wp_safe_redirect( add_query_arg( 'ae_verificacao', $resultado, admin_url( 'plugins.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Mostra o resultado da verificação manual (link acima) na tela de
+	 * plugins, já que ela roda via redirect e não tem outro jeito de avisar
+	 * o usuário se conectou ao GitHub com sucesso ou não.
+	 */
+	public function aviso_resultado_verificacao() {
+		if ( ! isset( $_GET['ae_verificacao'] ) ) {
+			return;
+		}
+
+		$tela = get_current_screen();
+		if ( ! $tela || 'plugins' !== $tela->id ) {
+			return;
+		}
+
+		$resultado = sanitize_text_field( wp_unslash( $_GET['ae_verificacao'] ) );
+
+		$mensagens = array(
+			'nova_versao'   => array( 'success', __( 'Encontrada uma nova versão do Agendar Entregas — já deve aparecer na lista abaixo para atualizar.', 'agendar-entregas' ) ),
+			'sem_novidade'  => array( 'info', __( 'Verificado agora: você já está com a versão mais recente do Agendar Entregas.', 'agendar-entregas' ) ),
+			'erro_conexao'  => array( 'error', __( 'Não foi possível consultar o GitHub agora (falha de conexão ou nenhuma release publicada). Tente de novo em alguns minutos.', 'agendar-entregas' ) ),
+		);
+
+		if ( ! isset( $mensagens[ $resultado ] ) ) {
+			return;
+		}
+
+		list( $tipo, $texto ) = $mensagens[ $resultado ];
+
+		printf(
+			'<div class="notice notice-%1$s is-dismissible"><p>%2$s</p></div>',
+			esc_attr( $tipo ),
+			esc_html( $texto )
+		);
 	}
 }
