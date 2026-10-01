@@ -77,6 +77,12 @@ jQuery( function ( $ ) {
 	}
 
 	/**
+	 * Instância Flatpickr atual (compartilhada entre chamadas, não presa a um
+	 * nó específico do DOM — ver motivo abaixo).
+	 */
+	var flatpickrInstancia = null;
+
+	/**
 	 * Cria (ou reaproveita) o datepicker do campo de data, desabilitando
 	 * visualmente os dias sem vaga — o input nativo type="date" não permite
 	 * isso, por isso o campo é renderizado como texto (readonly) e o
@@ -87,10 +93,21 @@ jQuery( function ( $ ) {
 			return;
 		}
 
-		var instancia = $data[0]._flatpickr;
+		if ( ! flatpickrInstancia || flatpickrInstancia.input !== $data[ 0 ] ) {
+			// O WooCommerce recria este <input> do zero a cada update_checkout
+			// (troca de método de entrega, CEP, etc.) — o Flatpickr, porém,
+			// anexa o calendário em <body>, não dentro do input, então a
+			// instância antiga nunca é removida junto quando o input velho
+			// desaparece do DOM. Sem destruí-la, ela vira um popup "fantasma"
+			// que continua no body e pode roubar o clique do calendário atual,
+			// fazendo o cliente escolher uma data num calendário que não é
+			// mais o visível - a data enviada no formulário fica dessincronizada
+			// da que aparece selecionada na tela, e o calendário parece travar.
+			if ( flatpickrInstancia ) {
+				flatpickrInstancia.destroy();
+			}
 
-		if ( ! instancia ) {
-			instancia = window.flatpickr( $data[0], {
+			flatpickrInstancia = window.flatpickr( $data[ 0 ], {
 				// dateFormat continua Y-m-d: é o valor "de verdade" enviado no
 				// formulário/AJAX (input original, mantido em sincronia mas
 				// escondido pelo altInput). altFormat é só o que o cliente vê,
@@ -117,8 +134,8 @@ jQuery( function ( $ ) {
 			nonce: aeCheckout.nonce,
 			metodo: metodoEntregaSelecionado()
 		} ).done( function ( response ) {
-			if ( response.success && response.data.datas.length ) {
-				instancia.set( 'enable', response.data.datas );
+			if ( response.success && response.data.datas.length && flatpickrInstancia ) {
+				flatpickrInstancia.set( 'enable', response.data.datas );
 			}
 		} );
 	}
