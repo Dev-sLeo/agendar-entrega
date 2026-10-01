@@ -39,15 +39,19 @@ Plugin para WooCommerce que adiciona agendamento de entregas no checkout, com tu
 
 ## Atualizações automáticas via GitHub
 
-O plugin verifica periodicamente a [última release do repositório](https://github.com/Dev-sLeo/agendar-entrega/releases) e injeta a atualização diretamente na tela **Painel > Plugins**, como se fosse uma atualização normal — sem depender do WordPress.org.
+O plugin usa a biblioteca [Plugin Update Checker](https://github.com/YahnisElsts/plugin-update-checker) (vendorizada em `includes/libs/plugin-update-checker`) para verificar as tags do repositório e injetar a atualização diretamente na tela **Painel > Plugins**, como se fosse uma atualização normal — sem depender do WordPress.org.
 
 ### Como publicar uma nova versão
 
 1. Atualize o número da versão no cabeçalho de `agendar-entregas.php` (`Version:`) e na constante `AE_VERSION`.
 2. Faça commit e push das alterações.
-3. Crie uma tag e uma [Release](https://github.com/Dev-sLeo/agendar-entrega/releases/new) no GitHub com o mesmo número de versão (o prefixo `v`, ex. `v1.2.0`, é opcional — é removido automaticamente na comparação).
-4. Descreva as mudanças no corpo da release: esse texto aparece no changelog exibido pelo WordPress.
-5. Em até 6 horas (ou imediatamente ao clicar em "Verificar novamente" na tela de plugins), os sites com o plugin instalado vão detectar a atualização.
+3. Crie e envie uma tag no GitHub com o mesmo número de versão (o prefixo `v`, ex. `v1.2.0`, é opcional):
+   ```bash
+   git tag v1.2.0
+   git push origin v1.2.0
+   ```
+4. (Opcional) Publique também uma [Release](https://github.com/Dev-sLeo/agendar-entrega/releases/new) a partir dessa tag, descrevendo as mudanças — esse texto aparece no changelog exibido pelo WordPress. Sem uma Release, a atualização funciona do mesmo jeito, só não mostra changelog.
+5. Em algumas horas (ou imediatamente ao clicar em "Verificar novamente" na tela de plugins), os sites com o plugin instalado vão detectar a atualização.
 
 ### Repositório privado
 
@@ -63,7 +67,8 @@ define( 'AE_GITHUB_TOKEN', 'ghp_xxxxxxxxxxxxxxxxxxxx' );
 agendar-entregas.php                       Bootstrap do plugin
 includes/
   class-ae-plugin.php                      Inicialização dos módulos
-  class-ae-github-updater.php              Atualização via GitHub Releases
+  class-ae-updater.php                     Configura o Plugin Update Checker (atualização via GitHub)
+  libs/plugin-update-checker/              Biblioteca vendorizada YahnisElsts/plugin-update-checker
   class-ae-cpt-turno.php                   CPT interno "turno"
   class-ae-disponibilidade.php             Regra central de vagas/disponibilidade
   class-ae-agendamentos.php                Tabela de agendamentos (wp_ae_agendamentos)
