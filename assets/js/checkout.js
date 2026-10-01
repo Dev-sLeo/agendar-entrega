@@ -63,11 +63,22 @@ jQuery( function ( $ ) {
 				$turnoAtual.append( $( '<option>', { value: turno.id, text: turno.label } ) );
 			} );
 
-			// O navegador seleciona a primeira opção automaticamente, mas isso não
-			// dispara 'change' — sem esse evento, a validação do checkout (que
-			// libera o botão "Continuar para pagamento") nunca fica sabendo que o
-			// campo, antes vazio/inválido, agora já tem um turno válido escolhido.
+			// Seleciona o primeiro turno explicitamente (não confia só no
+			// navegador selecionar a primeira <option> sozinho) para garantir
+			// que o <select>, que estava vazio/inválido enquanto a lista
+			// carregava, sempre termine com um valor de verdade escolhido -
+			// isso vale tanto para 1 turno quanto para vários.
+			$turnoAtual.val( response.data.turnos[ 0 ].id );
+
+			// A validação do checkout (que libera o botão "Continuar para
+			// pagamento") escuta 'change' no <form>, mas em alguns navegadores/
+			// versões do jQuery um 'change' disparado via jQuery não chega de
+			// forma confiável em listeners nativos (addEventListener) presos
+			// no form - por isso disparamos também um Event nativo de verdade,
+			// além do trigger do jQuery (mantido por compatibilidade com outros
+			// handlers que possam estar presos via jQuery).
 			$turnoAtual.trigger( 'change' );
+			$turnoAtual[ 0 ].dispatchEvent( new Event( 'change', { bubbles: true } ) );
 		} ).fail( function () {
 			var $turnoAtual = $( '#ae_turno' );
 			if ( $turnoAtual.length ) {
@@ -120,8 +131,14 @@ jQuery( function ( $ ) {
 				minDate: aeCheckout.dataMinima,
 				defaultDate: $data.val() || null,
 				disableMobile: true,
-				onChange: function ( datasSelecionadas, dataTexto ) {
+				onChange: function ( datasSelecionadas, dataTexto, instancia ) {
 					carregarTurnos( dataTexto );
+
+					// Mesma garantia do 'change' do turno (ver carregarTurnos):
+					// dispara um Event nativo no input original, pra validação
+					// do checkout saber imediatamente que a data mudou, mesmo se
+					// o disparo interno do Flatpickr não chegar a algum listener.
+					instancia.input.dispatchEvent( new Event( 'change', { bubbles: true } ) );
 				}
 			} );
 		}
