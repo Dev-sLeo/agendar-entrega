@@ -107,7 +107,9 @@ $botao_class = 'inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text
 					<?php endif; ?>
 					<?php foreach ( $dias_bloqueados as $dia ) : ?>
 						<tr>
-							<td class="px-6 py-3 text-gray-900"><?php echo esc_html( wp_date( get_option( 'date_format', 'd/m/Y' ), strtotime( $dia->data ) ) ); ?></td>
+							<?php /* mysql2date(), não wp_date()+strtotime(): $dia->data é uma data "pura" (AAAA-MM-DD, sem horário); wp_date()
+							converteria para o fuso do site, deslocando a data em -1 em fusos negativos como o do Brasil (ex.: dia 10 virava 09). */ ?>
+							<td class="px-6 py-3 text-gray-900"><?php echo esc_html( mysql2date( get_option( 'date_format', 'd/m/Y' ), $dia->data ) ); ?></td>
 							<td class="px-6 py-3 text-gray-700"><?php echo esc_html( $dia->motivo ); ?></td>
 							<td class="px-6 py-3">
 								<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ae_excluir_dia_bloqueado&id=' . $dia->id ), 'ae_excluir_dia_bloqueado' ) ); ?>"
@@ -176,7 +178,7 @@ $botao_class = 'inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text
 						<?php endif; ?>
 						<?php foreach ( $limites_excecao as $ajuste ) : ?>
 							<tr>
-								<td class="px-6 py-3 text-gray-900"><?php echo esc_html( wp_date( get_option( 'date_format', 'd/m/Y' ), strtotime( $ajuste->data ) ) ); ?></td>
+								<td class="px-6 py-3 text-gray-900"><?php echo esc_html( mysql2date( get_option( 'date_format', 'd/m/Y' ), $ajuste->data ) ); ?></td>
 								<td class="px-6 py-3 text-gray-700">
 									<?php echo esc_html( isset( $turnos_por_id[ $ajuste->turno_id ] ) ? $turnos_por_id[ $ajuste->turno_id ]->nome : __( 'Turno removido', 'agendar-entregas' ) ); ?>
 								</td>

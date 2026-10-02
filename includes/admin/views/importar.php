@@ -99,7 +99,10 @@ $botao_class = 'inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text
 					<strong><?php esc_html_e( 'Última sincronização:', 'agendar-entregas' ); ?></strong>
 					<?php
 					$formato_data_hora = get_option( 'date_format', 'd/m/Y' ) . ' ' . get_option( 'time_format', 'H:i' );
-					echo $ultima_sync ? esc_html( wp_date( $formato_data_hora, strtotime( $ultima_sync ) ) ) : esc_html__( 'Nunca sincronizado.', 'agendar-entregas' );
+					// mysql2date(), não wp_date()+strtotime(): $ultima_sync vem de
+					// current_time('mysql'), já no fuso do site - re-interpretar via
+					// strtotime() (que assume UTC) deslocaria o horário exibido.
+					echo $ultima_sync ? esc_html( mysql2date( $formato_data_hora, $ultima_sync ) ) : esc_html__( 'Nunca sincronizado.', 'agendar-entregas' );
 					?>
 				</p>
 				<?php if ( $ultimo_erro ) : ?>

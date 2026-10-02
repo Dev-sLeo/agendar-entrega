@@ -154,7 +154,9 @@ class AE_Checkout_Fields {
 		return sprintf(
 			/* translators: 1: data formatada, 2: nome do turno, 3: horário inicial, 4: horário final */
 			__( '%1$s — %2$s (%3$s às %4$s)', 'agendar-entregas' ),
-			wp_date( get_option( 'date_format', 'd/m/Y' ), strtotime( $data ) ),
+			// mysql2date(), não wp_date()+strtotime(): $data é uma data "pura"
+			// (AAAA-MM-DD); ver o mesmo comentário em includes/admin/views/dias-bloqueados.php.
+			mysql2date( get_option( 'date_format', 'd/m/Y' ), $data ),
 			$turno->nome,
 			$turno->hora_inicio,
 			$turno->hora_fim
