@@ -92,6 +92,9 @@ class AE_Admin_Turnos {
 
 		update_option( 'ae_dias_preparo', $dias_preparo );
 
+		// Checkbox desmarcado não é enviado no POST - ausência = desligado.
+		update_option( 'ae_checkout_habilitado', isset( $_POST['ae_checkout_habilitado'] ) ? '1' : '0' );
+
 		wp_safe_redirect( admin_url( 'admin.php?page=ae-turnos&ae_sucesso=1' ) );
 		exit;
 	}

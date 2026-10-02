@@ -17,6 +17,16 @@ class AE_Disponibilidade {
 	}
 
 	/**
+	 * Se os campos de data/turno devem aparecer no checkout do site. Desligar
+	 * isso não apaga agendamentos já feitos nem impede o admin de definir a
+	 * data/turno manualmente no pedido (ver AE_Checkout_Fields::exibir_no_admin) -
+	 * só esconde a coleta automática no front-end.
+	 */
+	public static function habilitado_no_checkout() {
+		return '1' === get_option( 'ae_checkout_habilitado', '1' );
+	}
+
+	/**
 	 * Primeira data disponível para entrega, considerando os dias de preparo.
 	 *
 	 * @return string Data no formato Y-m-d.

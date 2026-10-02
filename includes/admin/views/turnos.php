@@ -54,6 +54,18 @@ $botao_class = 'inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text
 					<?php esc_html_e( 'Quantidade de dias necessários antes que uma entrega possa ser agendada. Ex.: com 1 dia de espera, um pedido feito hoje só pode ser entregue depois de amanhã.', 'agendar-entregas' ); ?>
 				</p>
 
+				<div class="mt-5 pt-5 border-t border-gray-100">
+					<label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+						<input type="checkbox" name="ae_checkout_habilitado" value="1"
+							<?php checked( AE_Disponibilidade::habilitado_no_checkout() ); ?>
+							class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+						<?php esc_html_e( 'Mostrar campos de agendamento no checkout', 'agendar-entregas' ); ?>
+					</label>
+					<p class="mt-1 text-xs text-gray-500">
+						<?php esc_html_e( 'Desligar isso só esconde os campos de data/turno para o cliente no site - o admin ainda pode definir a entrega manualmente dentro de cada pedido.', 'agendar-entregas' ); ?>
+					</p>
+				</div>
+
 				<button type="submit" class="<?php echo esc_attr( $botao_class ); ?> mt-4">
 					<?php esc_html_e( 'Salvar configurações', 'agendar-entregas' ); ?>
 				</button>

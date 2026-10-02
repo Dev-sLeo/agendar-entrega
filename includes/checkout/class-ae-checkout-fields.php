@@ -10,10 +10,22 @@ class AE_Checkout_Fields {
 		add_action( 'woocommerce_checkout_process', array( $this, 'validar' ) );
 		add_action( 'woocommerce_checkout_update_order_meta', array( $this, 'salvar' ) );
 		add_action( 'woocommerce_admin_order_data_after_billing_address', array( $this, 'exibir_no_admin' ) );
+		// Prioridade 100 (não a padrão, 10): precisa rodar DEPOIS de
+		// WC_Meta_Box_Order_Data::save() (prioridade 40), que busca o pedido
+		// do zero e dá seu próprio save() no final - salvando antes disso, a
+		// gravação era sobrescrita silenciosamente pelo save() do WooCommerce.
+		add_action( 'woocommerce_process_shop_order_meta', array( $this, 'salvar_no_admin' ), 100 );
 		add_action( 'woocommerce_order_details_after_order_table', array( $this, 'exibir_no_email_e_conta' ) );
 	}
 
 	public function exibir_campos() {
+		// O toggle "Mostrar campos de agendamento no checkout" (tela Turnos)
+		// só esconde a coleta no front-end - o admin continua podendo definir
+		// a data/turno manualmente no pedido (ver exibir_no_admin()).
+		if ( ! AE_Disponibilidade::habilitado_no_checkout() ) {
+			return;
+		}
+
 		// Oculto por padrão; o JS exibe somente depois que um método de entrega
 		// é selecionado (ver assets/js/checkout.js).
 		//
@@ -74,6 +86,13 @@ class AE_Checkout_Fields {
 	}
 
 	public function validar() {
+		// Com o toggle desligado os campos nem aparecem no checkout - exigir
+		// data/turno nesse caso travaria toda compra. O admin ainda pode
+		// definir isso manualmente depois, direto no pedido.
+		if ( ! AE_Disponibilidade::habilitado_no_checkout() ) {
+			return;
+		}
+
 		$data     = isset( $_POST['ae_data_entrega'] ) ? sanitize_text_field( wp_unslash( $_POST['ae_data_entrega'] ) ) : '';
 		$turno_id = isset( $_POST['ae_turno'] ) ? absint( $_POST['ae_turno'] ) : 0;
 
@@ -163,13 +182,70 @@ class AE_Checkout_Fields {
 		);
 	}
 
+	/**
+	 * No admin do pedido, a data/turno sempre são editáveis manualmente -
+	 * mesmo com o toggle "Mostrar no checkout" desligado (nesse caso é a
+	 * ÚNICA forma de registrar o agendamento, já que o cliente não vê os
+	 * campos no front-end). Fica dentro do próprio <form> da tela de edição
+	 * do pedido, então é salvo junto com o botão "Atualizar" nativo do
+	 * WooCommerce - ver salvar_no_admin(), preso em
+	 * woocommerce_process_shop_order_meta.
+	 */
 	public function exibir_no_admin( $order ) {
-		$texto = $this->texto_agendamento( $order->get_id() );
-		if ( empty( $texto ) ) {
+		$data_atual     = $order->get_meta( '_ae_data_entrega', true );
+		$turno_id_atual = $order->get_meta( '_ae_turno_id', true );
+		$turnos         = AE_CPT_Turno::listar_turnos();
+		?>
+		<div class="ae-agendamento-admin" style="clear:both; padding-top:12px; margin-top:12px; border-top:1px solid #eee;">
+			<h4><?php esc_html_e( 'Agendamento de entrega', 'agendar-entregas' ); ?></h4>
+			<p class="form-field form-field-wide">
+				<label for="ae_data_entrega"><?php esc_html_e( 'Data de entrega', 'agendar-entregas' ); ?></label>
+				<input type="date" id="ae_data_entrega" name="ae_data_entrega" value="<?php echo esc_attr( $data_atual ); ?>" />
+			</p>
+			<p class="form-field form-field-wide">
+				<label for="ae_turno"><?php esc_html_e( 'Turno', 'agendar-entregas' ); ?></label>
+				<select id="ae_turno" name="ae_turno">
+					<option value=""><?php esc_html_e( 'Sem turno definido', 'agendar-entregas' ); ?></option>
+					<?php foreach ( $turnos as $turno ) : ?>
+						<option value="<?php echo esc_attr( $turno->id ); ?>" <?php selected( (int) $turno_id_atual, $turno->id ); ?>>
+							<?php echo esc_html( sprintf( '%s (%s - %s)', $turno->nome, $turno->hora_inicio, $turno->hora_fim ) ); ?>
+						</option>
+					<?php endforeach; ?>
+				</select>
+			</p>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Salva a data/turno definidos manualmente na tela de edição do pedido.
+	 * Preso em woocommerce_process_shop_order_meta (não checkout_update_order_meta,
+	 * que só roda na finalização da compra pelo cliente) - já coberto pelo
+	 * nonce que o próprio WooCommerce confere antes de disparar esse hook.
+	 */
+	public function salvar_no_admin( $order_id ) {
+		if ( ! isset( $_POST['ae_data_entrega'] ) && ! isset( $_POST['ae_turno'] ) ) {
 			return;
 		}
 
-		echo '<p><strong>' . esc_html__( 'Entrega agendada:', 'agendar-entregas' ) . '</strong> ' . esc_html( $texto ) . '</p>';
+		$order = wc_get_order( $order_id );
+		if ( ! $order ) {
+			return;
+		}
+
+		$data     = sanitize_text_field( wp_unslash( $_POST['ae_data_entrega'] ?? '' ) );
+		$turno_id = absint( $_POST['ae_turno'] ?? 0 );
+
+		if ( empty( $data ) || empty( $turno_id ) ) {
+			$order->delete_meta_data( '_ae_data_entrega' );
+			$order->delete_meta_data( '_ae_turno_id' );
+			$order->save();
+			return;
+		}
+
+		$order->update_meta_data( '_ae_data_entrega', $data );
+		$order->update_meta_data( '_ae_turno_id', $turno_id );
+		$order->save();
 	}
 
 	public function exibir_no_email_e_conta( $order ) {
