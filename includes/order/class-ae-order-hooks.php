@@ -37,6 +37,15 @@ class AE_Order_Hooks {
 		$resultado = AE_Disponibilidade::reservar( $order_id, $data, $turno_id, $this->metodo_entrega_do_pedido( $order_id ) );
 
 		if ( is_wp_error( $resultado ) ) {
+			AE_Logger::erro(
+				sprintf(
+					'Falha ao reservar vaga do pedido #%d (data: %s, turno: %d): %s',
+					$order_id,
+					$data,
+					$turno_id,
+					$resultado->get_error_message()
+				)
+			);
 			throw new Exception( esc_html( $resultado->get_error_message() ) );
 		}
 	}
@@ -141,6 +150,8 @@ class AE_Order_Hooks {
 			}
 		}
 
+		AE_Logger::info( sprintf( 'Sincronização manual de pedidos antigos: %d agendamento(s) recriado(s).', $sincronizados ) );
+
 		wp_safe_redirect( admin_url( 'admin.php?page=ae-calendario&ae_sincronizados=' . (int) $sincronizados ) );
 		exit;
 	}
@@ -151,6 +162,10 @@ class AE_Order_Hooks {
 	public function expirar_reservas() {
 		$expiradas = AE_Agendamentos::listar_reservas_expiradas( self::HORAS_EXPIRACAO );
 
+		if ( empty( $expiradas ) ) {
+			return;
+		}
+
 		foreach ( $expiradas as $reserva ) {
 			$order = wc_get_order( $reserva->order_id );
 
@@ -160,6 +175,15 @@ class AE_Order_Hooks {
 			}
 
 			AE_Agendamentos::atualizar_status_por_pedido( $reserva->order_id, AE_Agendamentos::STATUS_CANCELADO );
+			AE_Logger::info(
+				sprintf(
+					'Reserva do pedido #%d expirada após %d horas sem pagamento (data: %s, turno: %d) - vaga liberada.',
+					$reserva->order_id,
+					self::HORAS_EXPIRACAO,
+					$reserva->data_entrega,
+					$reserva->turno_id
+				)
+			);
 		}
 	}
 }

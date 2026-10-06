@@ -96,11 +96,19 @@ class AE_Google_Sheets_Sync {
 
 		if ( is_wp_error( $resultado ) ) {
 			update_option( 'ae_planilha_ultimo_erro', $resultado->get_error_message() );
+			AE_Logger::erro( 'Sincronização da planilha Google Sheets falhou: ' . $resultado->get_error_message() );
 			return;
 		}
 
 		delete_option( 'ae_planilha_ultimo_erro' );
 		update_option( 'ae_planilha_ultimo_resumo', $resultado );
+		AE_Logger::info(
+			sprintf(
+				'Sincronização da planilha Google Sheets concluída: %d dia(s) importado(s)/atualizado(s), %d ignorado(s).',
+				$resultado['importados'],
+				$resultado['ignorados']
+			)
+		);
 	}
 
 	public static function ultima_sincronizacao() {

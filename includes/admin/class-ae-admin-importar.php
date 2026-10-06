@@ -58,9 +58,19 @@ class AE_Admin_Importar {
 		wp_delete_file( $enviado['file'] );
 
 		if ( is_wp_error( $resultado ) ) {
+			AE_Logger::erro( 'Importação manual de planilha (arquivo) falhou: ' . $resultado->get_error_message() );
 			wp_safe_redirect( add_query_arg( 'ae_erro', rawurlencode( $resultado->get_error_message() ), admin_url( 'admin.php?page=ae-importar' ) ) );
 			exit;
 		}
+
+		AE_Logger::info(
+			sprintf(
+				'Importação manual de planilha (arquivo .%s): %d dia(s) importado(s)/atualizado(s), %d ignorado(s).',
+				$extensao,
+				$resultado['importados'],
+				$resultado['ignorados']
+			)
+		);
 
 		wp_safe_redirect(
 			add_query_arg(

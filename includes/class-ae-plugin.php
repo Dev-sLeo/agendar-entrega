@@ -44,6 +44,7 @@ class AE_Plugin {
 	}
 
 	private function includes() {
+		require_once AE_PLUGIN_DIR . 'includes/class-ae-logger.php';
 		require_once AE_PLUGIN_DIR . 'includes/class-ae-cpt-turno.php';
 		require_once AE_PLUGIN_DIR . 'includes/class-ae-dias-bloqueados.php';
 		require_once AE_PLUGIN_DIR . 'includes/class-ae-agendamentos.php';
