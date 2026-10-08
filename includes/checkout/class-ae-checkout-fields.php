@@ -222,6 +222,11 @@ class AE_Checkout_Fields {
 	 * Preso em woocommerce_process_shop_order_meta (não checkout_update_order_meta,
 	 * que só roda na finalização da compra pelo cliente) - já coberto pelo
 	 * nonce que o próprio WooCommerce confere antes de disparar esse hook.
+	 *
+	 * Além do meta do pedido, sincroniza também a linha em wp_ae_agendamentos
+	 * - é de lá, não do meta, que o calendário admin e a contagem de vagas
+	 * (AE_Agendamentos::contar_ativos) lêem. Sem isso, editar a data/turno
+	 * manualmente aqui "funcionava" no pedido mas nunca aparecia no calendário.
 	 */
 	public function salvar_no_admin( $order_id ) {
 		if ( ! isset( $_POST['ae_data_entrega'] ) && ! isset( $_POST['ae_turno'] ) ) {
@@ -240,12 +245,23 @@ class AE_Checkout_Fields {
 			$order->delete_meta_data( '_ae_data_entrega' );
 			$order->delete_meta_data( '_ae_turno_id' );
 			$order->save();
+
+			// Libera a vaga que esse pedido ocupava, se tinha alguma.
+			if ( AE_Agendamentos::obter_por_pedido( $order_id ) ) {
+				AE_Agendamentos::atualizar_status_por_pedido( $order_id, AE_Agendamentos::STATUS_CANCELADO );
+			}
 			return;
 		}
 
 		$order->update_meta_data( '_ae_data_entrega', $data );
 		$order->update_meta_data( '_ae_turno_id', $turno_id );
 		$order->save();
+
+		$status = $order->has_status( array( 'processing', 'completed' ) )
+			? AE_Agendamentos::STATUS_CONFIRMADO
+			: AE_Agendamentos::STATUS_RESERVADO;
+
+		AE_Agendamentos::definir_para_pedido( $order_id, $data, $turno_id, $status );
 	}
 
 	public function exibir_no_email_e_conta( $order ) {

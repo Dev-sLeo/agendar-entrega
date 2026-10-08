@@ -38,6 +38,16 @@ jQuery( function ( $ ) {
 			return;
 		}
 
+		// Guarda o turno que o cliente já tinha escolhido ANTES de zerar o
+		// <select> - "updated_checkout" dispara de novo a cada recálculo do
+		// WooCommerce (digitar CEP, mudar endereço, aplicar cupom...), não só
+		// quando a data/turno realmente mudam. Sem isso, qualquer um desses
+		// recálculos recarregava a lista e forçava de volta o primeiro turno,
+		// descartando a escolha do cliente sem ele perceber - o valor
+		// realmente enviado no pedido acabava sendo outro turno, não o que
+		// aparecia selecionado quando ele escolheu.
+		var turnoEscolhidoAntes = $turno.val();
+
 		resetarTurno( $turno, '...' );
 
 		$.post( aeCheckout.ajaxUrl, {
@@ -63,12 +73,15 @@ jQuery( function ( $ ) {
 				$turnoAtual.append( $( '<option>', { value: turno.id, text: turno.label } ) );
 			} );
 
-			// Seleciona o primeiro turno explicitamente (não confia só no
-			// navegador selecionar a primeira <option> sozinho) para garantir
-			// que o <select>, que estava vazio/inválido enquanto a lista
-			// carregava, sempre termine com um valor de verdade escolhido -
-			// isso vale tanto para 1 turno quanto para vários.
-			$turnoAtual.val( response.data.turnos[ 0 ].id );
+			// Mantém a escolha anterior do cliente se ela ainda existir entre
+			// as opções retornadas; só cai no primeiro turno da lista (não
+			// confiando no navegador selecionar a primeira <option> sozinho)
+			// quando não havia escolha prévia ou ela deixou de ter vaga.
+			var aindaDisponivel = response.data.turnos.some( function ( turno ) {
+				return String( turno.id ) === String( turnoEscolhidoAntes );
+			} );
+
+			$turnoAtual.val( aindaDisponivel ? turnoEscolhidoAntes : response.data.turnos[ 0 ].id );
 
 			// A validação do checkout (que libera o botão "Continuar para
 			// pagamento") escuta 'change' no <form>, mas em alguns navegadores/
